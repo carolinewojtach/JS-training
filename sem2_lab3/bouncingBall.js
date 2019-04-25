@@ -1,5 +1,5 @@
 const _ = require("lodash");
-let board = require("./bouncyBoard.js");
+const board = require("./bouncyBoard");
 
 // all possible directions
 const allDirections = [
@@ -12,15 +12,14 @@ const allDirections = [
 class Position {
   static getStartPosition() {
     // find start position
-    for (let i = 0; i < 15; i++) {
-      for (let j = 0; j < 11; j++) {
+    for (let i = 0; i < 10; i++) {
+      for (let j = 0; j < 7; j++) {
         if (board[i][j] === "1") {
           return [i, j];
         }
       }
     }
   }
-
   static getNextPosition(position, direction) {
     let nextPosition = [
       position[0] + direction.vector[0],
@@ -45,26 +44,6 @@ class WallChecker {
   }
 }
 
-class DirectionRandomizer {
-  static getRandDirection(direction) {
-    // available 4 directions - for first direction draw
-    let amount = 4;
-    let availableDirections = [...allDirections];
-
-    // available 3 directions - for case with Y
-    if (direction !== undefined) {
-      amount = 3;
-      availableDirections = allDirections.filter(
-        dir => dir.name !== direction.name
-      );
-    }
-
-    let randNumber = Math.floor(Math.random() * amount);
-    let newDirection = availableDirections[randNumber];
-    return newDirection;
-  }
-}
-
 class DirectionChecker {
   static getNextDirection(position, direction) {
     // ball position coordinates
@@ -75,8 +54,8 @@ class DirectionChecker {
     let a = direction.vector[0];
     let b = direction.vector[1];
 
-    // check if ball came across 0 or Y
-    if (board[x + a][y + b] !== "X") return direction;
+    // check if ball came across 0
+    if (board[x + a][y + b] === "0") return direction;
     else {
       let verticalWall = "";
       let horizontalWall = "";
@@ -89,7 +68,6 @@ class DirectionChecker {
           return allDirections[2];
         else if (verticalWall === false && horizontalWall === true)
           return allDirections[0];
-        else return allDirections[1];
       }
       if (direction.name === "down-right") {
         verticalWall = WallChecker.checkRightWall(x, y);
@@ -99,7 +77,6 @@ class DirectionChecker {
           return allDirections[1];
         else if (verticalWall === false && horizontalWall === true)
           return allDirections[3];
-        else return allDirections[2];
       }
       if (direction.name === "down-left") {
         verticalWall = WallChecker.checkLeftWall(x, y);
@@ -109,7 +86,6 @@ class DirectionChecker {
           return allDirections[0];
         else if (verticalWall === false && horizontalWall === true)
           return allDirections[2];
-        else return allDirections[3];
       }
       if (direction.name === "up-left") {
         verticalWall = WallChecker.checkLeftWall(x, y);
@@ -119,7 +95,6 @@ class DirectionChecker {
           return allDirections[3];
         else if (verticalWall === false && horizontalWall === true)
           return allDirections[1];
-        else return allDirections[0];
       }
     }
   }
@@ -134,52 +109,33 @@ class CellValueChanger {
 class MainGame {
   static start() {
     // get start position
-    let startPosition = Position.getStartPosition();
+    const startPosition = Position.getStartPosition();
     console.log("start position " + startPosition);
     console.table(board);
 
     let currentPosition = startPosition;
 
     // default direction
-    let currentDirection = DirectionRandomizer.getRandDirection();
-
-    let prevYPosition = false;
+    let direction = allDirections[0];
     let i = 1;
-    while (i <= 50) {
+    let success = false;
+    while (success === false) {
       // remove ball from current cell - make cell 0
       CellValueChanger.changeValue(currentPosition, "0");
 
-      // calculate next direction
-      if (prevYPosition === false) {
-        currentDirection = DirectionChecker.getNextDirection(
-          currentPosition,
-          currentDirection
-        );
-        // if prev was Y
-      } else {
-        currentDirection = DirectionRandomizer.getRandDirection(
-          currentDirection
-        );
-        prevYPosition = false;
-        console.log("Y changed direction");
-      }
-      console.log(i + ". direction: " + currentDirection.name);
+      direction = DirectionChecker.getNextDirection(currentPosition, direction);
+      console.log(i + ". direction: " + direction.name);
 
       // calculate next position
-      let nextPosition = Position.getNextPosition(
-        currentPosition,
-        currentDirection
-      );
-
-      // check if Y is on next position
-      if (board[nextPosition[0]][nextPosition[1]] === "Y") {
-        prevYPosition = true;
-      }
-      currentPosition = nextPosition;
+      currentPosition = Position.getNextPosition(currentPosition, direction);
 
       // move ball to new cell - make cell 1
       CellValueChanger.changeValue(currentPosition, "1");
+
       console.table(board);
+
+      // check if ball come back to start
+      if (_.isEqual(currentPosition, startPosition)) success = true;
       i++;
     }
 
