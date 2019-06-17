@@ -1,4 +1,6 @@
 const _ = require("lodash");
+const DirectionChecker = require("./DirectionChecker");
+const Position = require("./position");
 let board = require("./bouncyBoard.js");
 
 // all possible directions
@@ -8,42 +10,6 @@ const allDirections = [
   { name: "up-left", vector: [-1, -1] },
   { name: "up-right", vector: [-1, 1] }
 ];
-
-class Position {
-  static getStartPosition() {
-    // find start position
-    for (let i = 0; i < 15; i++) {
-      for (let j = 0; j < 11; j++) {
-        if (board[i][j] === "1") {
-          return [i, j];
-        }
-      }
-    }
-  }
-
-  static getNextPosition(position, direction) {
-    let nextPosition = [
-      position[0] + direction.vector[0],
-      position[1] + direction.vector[1]
-    ];
-    return nextPosition;
-  }
-}
-
-class WallChecker {
-  static checkUpperWall(x, y) {
-    return board[x - 1][y] === "X" ? true : false;
-  }
-  static checkDownWall(x, y) {
-    return board[x + 1][y] === "X" ? true : false;
-  }
-  static checkLeftWall(x, y) {
-    return board[x][y - 1] === "X" ? true : false;
-  }
-  static checkRightWall(x, y) {
-    return board[x][y + 1] === "X" ? true : false;
-  }
-}
 
 class DirectionRandomizer {
   static getRandDirection(direction) {
@@ -65,69 +31,9 @@ class DirectionRandomizer {
   }
 }
 
-class DirectionChecker {
-  static getNextDirection(position, direction) {
-    // ball position coordinates
-    let x = position[0];
-    let y = position[1];
-
-    // direction vector
-    let a = direction.vector[0];
-    let b = direction.vector[1];
-
-    // check if ball came across 0 or Y
-    if (board[x + a][y + b] !== "X") return direction;
-    else {
-      let verticalWall = "";
-      let horizontalWall = "";
-
-      if (direction.name === "up-right") {
-        verticalWall = WallChecker.checkRightWall(x, y);
-        horizontalWall = WallChecker.checkUpperWall(x, y);
-        if (verticalWall && horizontalWall === true) return allDirections[1];
-        else if (verticalWall === true && horizontalWall === false)
-          return allDirections[2];
-        else if (verticalWall === false && horizontalWall === true)
-          return allDirections[0];
-        else return allDirections[1];
-      }
-      if (direction.name === "down-right") {
-        verticalWall = WallChecker.checkRightWall(x, y);
-        horizontalWall = WallChecker.checkDownWall(x, y);
-        if (verticalWall && horizontalWall === true) return allDirections[2];
-        else if (verticalWall === true && horizontalWall === false)
-          return allDirections[1];
-        else if (verticalWall === false && horizontalWall === true)
-          return allDirections[3];
-        else return allDirections[2];
-      }
-      if (direction.name === "down-left") {
-        verticalWall = WallChecker.checkLeftWall(x, y);
-        horizontalWall = WallChecker.checkDownWall(x, y);
-        if (verticalWall && horizontalWall === true) return allDirections[3];
-        else if (verticalWall === true && horizontalWall === false)
-          return allDirections[0];
-        else if (verticalWall === false && horizontalWall === true)
-          return allDirections[2];
-        else return allDirections[3];
-      }
-      if (direction.name === "up-left") {
-        verticalWall = WallChecker.checkLeftWall(x, y);
-        horizontalWall = WallChecker.checkUpperWall(x, y);
-        if (verticalWall && horizontalWall === true) return allDirections[0];
-        else if (verticalWall === true && horizontalWall === false)
-          return allDirections[3];
-        else if (verticalWall === false && horizontalWall === true)
-          return allDirections[1];
-        else return allDirections[0];
-      }
-    }
-  }
-}
-
 class CellValueChanger {
   static changeValue(position, value) {
-    board[position[0]][position[1]] = value;
+    board[position[0]][position[1]] = +value;
   }
 }
 
@@ -143,37 +49,32 @@ class MainGame {
     // default direction
     let currentDirection = DirectionRandomizer.getRandDirection();
 
-    let prevYPosition = false;
+    let isYOnPreviousPosition = false;
     let i = 1;
-    while (i <= 50) {
+    while (i <= movesNumber) {
       // remove ball from current cell - make cell 0
       CellValueChanger.changeValue(currentPosition, "0");
 
       // calculate next direction
-      if (prevYPosition === false) {
-        currentDirection = DirectionChecker.getNextDirection(
-          currentPosition,
-          currentDirection
-        );
-        // if prev was Y
-      } else {
-        currentDirection = DirectionRandomizer.getRandDirection(
-          currentDirection
-        );
-        prevYPosition = false;
+      // if previous position was 0
+      if (isYOnPreviousPosition === false) {
+        currentDirection = DirectionChecker.getNextDirection(currentPosition, currentDirection);
+      }
+      // if previous position was Y
+      else {
+        currentDirection = DirectionRandomizer.getRandDirection(currentDirection);
+        isYOnPreviousPosition = false;
         console.log("Y changed direction");
       }
       console.log(i + ". direction: " + currentDirection.name);
 
+
       // calculate next position
-      let nextPosition = Position.getNextPosition(
-        currentPosition,
-        currentDirection
-      );
+      let nextPosition = Position.getNextPosition(currentPosition, currentDirection);
 
       // check if Y is on next position
       if (board[nextPosition[0]][nextPosition[1]] === "Y") {
-        prevYPosition = true;
+        isYOnPreviousPosition = true;
       }
       currentPosition = nextPosition;
 
@@ -187,5 +88,6 @@ class MainGame {
   }
 }
 
+let movesNumber = 50;
 const game = MainGame.start();
 console.log("end position:" + game);
